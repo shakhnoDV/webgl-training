@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { GlService } from '../gl.service';
 import { ShaderService } from '../shader.service';
+import { RenderLoopService } from '../render-loop.service';
 @Component({
   selector: 'app-step1',
   templateUrl: './step1.component.html',
@@ -22,22 +23,33 @@ export class Step1Component implements OnInit, AfterViewInit {
     const shaderProg = ShaderService.createProgram(gl, vShader, fShader, true);
 
     const aPositionLoc = gl.getAttribLocation(shaderProg, 'a_position');
+    const uAngle = gl.getUniformLocation(shaderProg, 'uAngle');
+    const uAngle2 = gl.getUniformLocation(shaderProg, 'uAngle2');
     const uPointSizeLoc = gl.getUniformLocation(shaderProg, 'uPointSize');
-
-
-    const aryVerts = new Float32Array([0, 0, 0, 0.5, 0.5, 0]);
-    const bufVerts = gl.createBuffer();
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, bufVerts);
-    gl.bufferData(gl.ARRAY_BUFFER, aryVerts, gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.useProgram(shaderProg);
-    gl.uniform1f(uPointSizeLoc, 70.0);
+
+    const aryVerts = new Float32Array([0, 0, 0]);
+    const bufVerts = gl.createBuffer();
+    const gVertCnt = aryVerts.length / 3;
     gl.bindBuffer(gl.ARRAY_BUFFER, bufVerts);
     gl.enableVertexAttribArray(aPositionLoc);
     gl.vertexAttribPointer(aPositionLoc, 3, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.drawArrays(gl.POINTS, 0, 2);
+    let gPointSize = 0;
+    const gPSizeStep = 3;
+    let gAngle = 0;
+    const gAngleStep = (Math.PI / 180.0) * 90;
+    const onRender = (dt) => {
+      gPointSize += gPSizeStep * dt;
+      const size = (Math.sin(gPointSize) * 10.0) + 30.0;
+      gl.uniform1f(uPointSizeLoc, size);
+      gAngle += gAngleStep * dt;
+      gl.uniform1f(uAngle, gAngle);
+      gl.uniform1f(uAngle2, gAngle);
+      gl.fClear();
+      gl.drawArrays(gl.POINTS, 0, gVertCnt);
+    };
+    const RLoop = new RenderLoopService(onRender, 1).start();
   }
 
 }
